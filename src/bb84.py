@@ -70,6 +70,22 @@ def sift_keys(
     return alice_key, bob_key
 
 
+
+def intercept_resend(
+    alice_bit: int,
+    alice_basis: str,
+    eve_basis: str,
+    bob_basis: str,
+) -> int:
+    """Model Eve measuring and resending a BB84 state."""
+    eve_bit = measure(alice_bit, alice_basis, eve_basis)
+
+    # Eve prepares a replacement using her result and her basis.
+    bob_bit = measure(eve_bit, eve_basis, bob_basis)
+
+    return bob_bit
+
+
 def simulate_bb84(count: int) -> tuple[list[int], list[int]]:
     """Run ideal BB84 transmission and basis sifting."""
     alice_bits = random_bits(count)
@@ -87,6 +103,35 @@ def simulate_bb84(count: int) -> tuple[list[int], list[int]]:
         alice_bits, alice_bases, bob_bits, bob_bases
     )
 
+
+
+def simulate_intercept_resend(count: int) -> float:
+    """Estimate sifted-key QBER under Eve's intercept-resend attack."""
+    alice_bits = random_bits(count)
+    alice_bases = random_bases(count)
+    eve_bases = random_bases(count)
+    bob_bases = random_bases(count)
+
+    bob_bits = [
+        intercept_resend(bit, a_basis, e_basis, b_basis)
+        for bit, a_basis, e_basis, b_basis in zip(
+            alice_bits, alice_bases, eve_bases, bob_bases
+        )
+    ]
+
+    alice_key, bob_key = sift_keys(
+        alice_bits, alice_bases, bob_bits, bob_bases
+    )
+
+    if not alice_key:
+        return 0.0
+
+    errors = sum(
+        a_bit != b_bit
+        for a_bit, b_bit in zip(alice_key, bob_key)
+    )
+
+    return errors / len(alice_key)
 
 if __name__ == "__main__":
     alice_key, bob_key = simulate_bb84(20)

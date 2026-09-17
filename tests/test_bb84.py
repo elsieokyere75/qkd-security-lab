@@ -2,13 +2,14 @@
 import pytest
 
 from src.bb84 import (
+    intercept_resend,
     measure,
     random_bases,
     random_bits,
     sift_keys,
     simulate_bb84,
+    simulate_intercept_resend
 )
-
 
 def test_random_bits():
     bits = random_bits(100)
@@ -75,3 +76,17 @@ def test_invalid_basis():
 def test_negative_count():
     with pytest.raises(ValueError):
         random_bits(-1)
+
+        
+def test_eve_matching_basis_preserves_bit():
+    for bit in (0, 1):
+        for basis in ("Z", "X"):
+            assert intercept_resend(bit, basis, basis, basis) == bit
+
+            
+def test_intercept_resend_qber_is_near_25_percent():
+    qber = simulate_intercept_resend(10_000)
+
+    # A broad tolerance avoids making the test depend on
+    # one exact result from a random experiment.
+    assert 0.20 <= qber <= 0.30
